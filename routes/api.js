@@ -1,6 +1,6 @@
 "use strict";
-// const ObjectId = require("mongoose").ObjectId;
-const ObjectId = require("mongodb").ObjectID;
+const ObjectId = require("mongoose").Types.ObjectId;
+// const ObjectId = require("mongodb").ObjectID;
 const IssueModel = require("../models").Issue;
 const ProjectModel = require("../models").Project;
 
@@ -153,5 +153,28 @@ module.exports = function (app) {
 
     .delete(function (req, res) {
       let project = req.params.project;
+      const { _id } = req.body;
+      if (!_id) return res.json({ error: "missing _id" });
+      ProjectModel.findOne({ name: project }, (err, projectdata) => {
+        if (err || !projectdata) {
+          return res.json({ error: "could not delete", _id: _id });
+        } else {
+          const issueData = projectdata.issues.id(_id); // find the issue
+          if (!issueData) {
+            // if no issue found
+            return res.json({ error: "could not delete", _id: _id });
+          }
+          issueData.remove(); // remove the issue
+          projectdata.save((err, data) => {
+            // update the project without the removed issue
+            if (err || !data) {
+              // if error or no data
+              return res.json({ error: "could not delete", _id: _id }); // send error
+            } else {
+              return res.json({ result: "successfully deleted", _id: _id }); // otherwise send success
+            }
+          });
+        }
+      });
     });
 };

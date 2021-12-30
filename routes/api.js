@@ -1,5 +1,6 @@
 "use strict";
-const mongoose = require("mongoose");
+// const ObjectId = require("mongoose").ObjectId;
+const ObjectId = require("mongodb").ObjectID;
 const IssueModel = require("../models").Issue;
 const ProjectModel = require("../models").Project;
 
@@ -55,10 +56,8 @@ module.exports = function (app) {
       let project = req.params.project;
       const { issue_title, issue_text, created_by, assigned_to, status_text } =
         req.body;
-      if (!issue_title || !issue_text || !created_by) {
-        console.log("not required fields");
+      if (!issue_title || !issue_text || !created_by)
         return res.json({ error: "required field(s) missing" });
-      }
       const newIssue = new IssueModel({
         issue_title: issue_title || "",
         issue_text: issue_text || "",
@@ -104,19 +103,52 @@ module.exports = function (app) {
         status_text,
         open,
       } = req.body;
-      if (!_id) {
-        return res.json({ error: "missing _id" });
+      try {
+        if (!_id) {
+          return res.json({ error: "missing _id" });
+        } else if (
+          !issue_title &&
+          !issue_text &&
+          !created_by &&
+          !assigned_to &&
+          !status_text &&
+          !open
+        ) {
+          return res.json({ error: "no update field(s) sent", _id: _id });
+        } else {
+          // res.json({ error: "could not update 1", _id: _id });
+          ProjectModel.findOne({ name: project }, (err, projectdata) => {
+            if (err || !projectdata) {
+              console.log("line 122");
+              return res.json({ error: "could not update", _id: _id });
+            } else {
+              const issueData = projectdata.issues.id(_id);
+              if (!issueData) {
+                console.log("line 127");
+                return res.json({ error: "could not update", _id: _id });
+              }
+              issueData.issue_title = issue_title || issueData.issue_title;
+              issueData.issue_text = issue_text || issueData.issue_text;
+              issueData.created_by = created_by || issueData.created_by;
+              issueData.assigned_to = assigned_to || issueData.assigned_to;
+              issueData.status_text = status_text || issueData.status_text;
+              issueData.updated_on = new Date();
+              issueData.open = open || issueData.open;
+              projectdata.save((err, data) => {
+                if (err || !data) {
+                  console.log("line 139");
+                  return res.json({ error: "could not update", _id: _id });
+                } else {
+                  return res.json({ result: "successfully updated", _id: _id });
+                }
+              });
+            }
+          });
+        }
+      } catch (error) {
+        console.log(error);
+        return res.json({ error: "could not update", _id: _id });
       }
-      if (
-        !issue_title &&
-        !issue_text &&
-        !created_by &&
-        !assigned_to &&
-        !status_text &&
-        !open
-      )
-        return res.json({ error: "no update field(s) sent", _id: _id });
-      else return res.json({ error: "could not update", _id: _id });
     })
 
     .delete(function (req, res) {

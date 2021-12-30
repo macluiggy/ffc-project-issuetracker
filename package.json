@@ -29,5 +29,8 @@
     "hyperdev",
     "express"
   ],
+  "engines": {
+    "node": "14.x"
+  },
   "license": "MIT"
 }

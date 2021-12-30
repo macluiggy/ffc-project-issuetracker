@@ -16,9 +16,10 @@ module.exports = function (app) {
         created_by,
         assigned_to,
         status_text,
+        open,
       } = req.query;
 
-      ProjectModel.aggregate(
+      ProjectModel.aggregate([
         { $match: { name: projectName } },
         { $unwind: "$issues" },
         _id != undefined
@@ -41,16 +42,23 @@ module.exports = function (app) {
           : { $match: {} },
         status_text != undefined
           ? { $match: { "issues.status_text": status_text } }
-          : { $match: {} }
-      ).exec((err, (data) => {}));
+          : { $match: {} },
+      ]).exec((err, data) => {
+        // thing to do with filtered data
+        if (!data) return res.json([]); // if no data, return empty array
+        let mappedData = data.map(({ issues }) => issues); // map the data to the issues array
+        return res.json(mappedData); // return the data
+      });
     })
 
     .post(function (req, res) {
       let project = req.params.project;
       const { issue_title, issue_text, created_by, assigned_to, status_text } =
         req.body;
-      if (!issue_title || !issue_text || !created_by)
-        return res.status(400).send({ error: "required field(s) missing" });
+      if (!issue_title || !issue_text || !created_by) {
+        console.log("not required fields");
+        return res.json({ error: "required field(s) missing" });
+      }
       const newIssue = new IssueModel({
         issue_title: issue_title || "",
         issue_text: issue_text || "",
@@ -87,6 +95,28 @@ module.exports = function (app) {
     })
     .put(function (req, res) {
       let project = req.params.project;
+      const {
+        _id,
+        issue_title,
+        issue_text,
+        created_by,
+        assigned_to,
+        status_text,
+        open,
+      } = req.body;
+      if (!_id) {
+        return res.json({ error: "missing _id" });
+      }
+      if (
+        !issue_title &&
+        !issue_text &&
+        !created_by &&
+        !assigned_to &&
+        !status_text &&
+        !open
+      )
+        return res.json({ error: "no update field(s) sent", _id: _id });
+      else return res.json({ error: "could not update", _id: _id });
     })
 
     .delete(function (req, res) {

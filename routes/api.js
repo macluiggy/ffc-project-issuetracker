@@ -1,12 +1,48 @@
 "use strict";
 const mongoose = require("mongoose");
-const { IssueModel, ProjectModel } = require("../models");
+const IssueModel = require("../models").Issue;
+const ProjectModel = require("../models").Project;
+
 module.exports = function (app) {
   app
     .route("/api/issues/:project")
 
     .get(function (req, res) {
-      let project = req.params.project;
+      let projectName = req.params.project;
+      const {
+        _id,
+        issue_title,
+        issue_text,
+        created_by,
+        assigned_to,
+        status_text,
+      } = req.query;
+
+      ProjectModel.aggregate(
+        { $match: { name: projectName } },
+        { $unwind: "$issues" },
+        _id != undefined
+          ? { $match: { "issues._id": ObjectId(_id) } }
+          : { $match: {} },
+        open != undefined
+          ? { $match: { "issues.open": open } }
+          : { $match: {} },
+        issue_title != undefined
+          ? { $match: { "issues.issue_title": issue_title } }
+          : { $match: {} },
+        issue_text != undefined
+          ? { $match: { "issues.issue_text": issue_text } }
+          : { $match: {} },
+        created_by != undefined
+          ? { $match: { "issues.created_by": created_by } }
+          : { $match: {} },
+        assigned_to != undefined
+          ? { $match: { "issues.assigned_to": assigned_to } }
+          : { $match: {} },
+        status_text != undefined
+          ? { $match: { "issues.status_text": status_text } }
+          : { $match: {} }
+      ).exec((err, (data) => {}));
     })
 
     .post(function (req, res) {
@@ -25,8 +61,30 @@ module.exports = function (app) {
         open: true,
         status_text: status_text || "",
       });
+      ProjectModel.findOne({ name: project }, (err, projectdata) => {
+        // find project
+        if (!projectdata) {
+          // if project not found
+          const newProject = new ProjectModel({ name: project }); // create new project
+          newProject.issues.push(newIssue); // add new issue to project
+          newProject.save((err, data) => {
+            // save project
+            if (err || !data)
+              // if error or no data
+              return res.send("There was and error saving in post"); // send error
+            return res.json(newIssue); // otherwise send new issue
+          });
+        } else {
+          projectdata.issues.push(newIssue); // add new issue to project
+          projectdata.save((err, data) => {
+            if (err || !data)
+              // if error or no data
+              return res.send("There was and error saving in post"); // send error
+            return res.json(newIssue); // otherwise send new issue
+          });
+        }
+      });
     })
-
     .put(function (req, res) {
       let project = req.params.project;
     })

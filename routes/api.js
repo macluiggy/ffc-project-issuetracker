@@ -76,6 +76,8 @@ module.exports = function (app) {
           newProject.issues.push(newIssue); // add new issue to project
           newProject.save((err, data) => {
             // save project
+            console.log(data);
+
             if (err || !data)
               // if error or no data
               return res.send("There was and error saving in post"); // send error
@@ -119,12 +121,12 @@ module.exports = function (app) {
           // res.json({ error: "could not update 1", _id: _id });
           ProjectModel.findOne({ name: project }, (err, projectdata) => {
             if (err || !projectdata) {
-              console.log("line 122");
+              console.log(err, "first error project model");
               return res.json({ error: "could not update", _id: _id });
             } else {
               const issueData = projectdata.issues.id(_id);
               if (!issueData) {
-                console.log("line 127");
+                console.log(issueData, "issue data secodn posssible error");
                 return res.json({ error: "could not update", _id: _id });
               }
               issueData.issue_title = issue_title || issueData.issue_title;
@@ -136,7 +138,7 @@ module.exports = function (app) {
               issueData.open = open || issueData.open;
               projectdata.save((err, data) => {
                 if (err || !data) {
-                  console.log("line 139");
+                  console.log(err, "third error project model");
                   return res.json({ error: "could not update", _id: _id });
                 } else {
                   return res.json({ result: "successfully updated", _id: _id });
